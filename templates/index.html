@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .loading {
+            display: none;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 text-white">
+    <div class="container mx-auto p-8">
+        <h1 class="text-4xl font-bold text-center mb-6">Certificate Generator</h1>
+
+        <div class="bg-white text-black p-4 rounded-lg mb-6">
+            <h2 class="text-xl font-bold">Instructions:</h2>
+            <ul class="list-disc pl-5">
+                <li>In your PPTX template, include the tag <strong>&lt;&lt;FULL NAME&gt;&gt;</strong> where you want the student's name to appear.</li>
+                <li>Your CSV file should have a column named <strong>Full_Name</strong> with the corresponding names of the students.</li>
+                <li>Ensure that the PPTX file is saved in the .pptx format.</li>
+                <li>Upload both files in the correct format to generate the certificates.</li>
+            </ul>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="bg-red-500 p-4 rounded-lg mb-4">
+                    <ul>
+                        {% for message in messages %}
+                            <li>{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" enctype="multipart/form-data" onsubmit="showLoading()">
+            <div class="mb-4">
+                <label class="block text-lg" for="pptx_file">Upload PPTX Template:</label>
+                <input class="border border-gray-300 p-2 rounded-lg w-full" type="file" name="pptx_file" accept=".pptx" required>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-lg" for="csv_file">Upload CSV File:</label>
+                <input class="border border-gray-300 p-2 rounded-lg w-full" type="file" name="csv_file" accept=".csv" required>
+            </div>
+
+            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Generate Certificates
+            </button>
+        </form>
+
+        <div class="loading flex items-center justify-center mt-4">
+            <div class="loader animate-spin h-10 w-10 border-t-4 border-b-4 border-white rounded-full"></div>
+            <span class="ml-4">Generating certificates...</span>
+        </div>
+    </div>
+
+    <script>
+        function showLoading() {
+            document.querySelector('.loading').style.display = 'flex';
+        }
+    </script>
+</body>
+
+</html>
