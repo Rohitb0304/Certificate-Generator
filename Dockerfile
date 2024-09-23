@@ -7,7 +7,13 @@ WORKDIR /app
 # Copy requirements.txt first for better caching
 COPY requirements.txt .
 
-# Install dependencies
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libreoffice \
+    unoconv \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
