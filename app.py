@@ -59,8 +59,8 @@ def index():
 
         # Load CSV
         student_data = pd.read_csv(csv_path)
-        if len(student_data) > 40:
-            flash('The limit is 40 records. Please upload a smaller file.')
+        if len(student_data) > 80:
+            flash('The limit is 80 records. Please upload a smaller file.')
             return redirect(request.url)
 
         # Initialize progress status
