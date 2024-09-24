@@ -1,11 +1,13 @@
 from flask import Flask, request, render_template, send_file, redirect, url_for, flash, session, jsonify
 import pandas as pd
 from pptx import Presentation
+from fpdf import FPDF
 import os
 import zipfile
 import shutil
-from utils import generate_certificate
 import time
+
+from utils import generate_certificate  # Assume this function exists
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -70,13 +72,24 @@ def index():
             "current_name": ""
         }
 
-        # Process each student and update progress
-        for idx, row in student_data.iterrows():
-            student_name = row['Full_Name']
-            progress_status['current_name'] = student_name  # Update the current student's name
-            generate_certificate(row, pptx_path, CERTIFICATES_FOLDER)
-            progress_status['completed'] += 1  # Update the count of completed certificates
-            time.sleep(1)  # Simulate delay for certificate generation
+        # Determine generation type and estimated time
+        generation_type = request.form.get('generation_type')
+        estimated_time = len(student_data) * (2 if generation_type == 'pdf' else 0)  # Assume 2 seconds per PDF
+
+        if generation_type == 'pptx':
+            for idx, row in student_data.iterrows():
+                student_name = row['Full_Name']
+                progress_status['current_name'] = student_name
+                generate_certificate(row, pptx_path, CERTIFICATES_FOLDER)
+                progress_status['completed'] += 1
+        elif generation_type == 'pdf':
+            for idx, row in student_data.iterrows():
+                student_name = row['Full_Name']
+                progress_status['current_name'] = student_name
+                # Simulate PDF generation
+                time.sleep(2)  # Simulate time taken to generate PDF
+                generate_pdf_certificate(row, CERTIFICATES_FOLDER)  # Function to generate PDF
+                progress_status['completed'] += 1
 
         flash('Certificates generated successfully! Preparing download...')
 
@@ -99,6 +112,19 @@ def index():
 def progress():
     """Return the current progress of certificate generation."""
     return jsonify(progress_status)
+
+def generate_pdf_certificate(row, output_folder):
+    """Function to generate a PDF certificate for a student."""
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    # Add content to PDF
+    pdf.cell(200, 10, txt=f"Certificate of Achievement for {row['Full_Name']}", ln=True, align='C')
+
+    # Save PDF to the output folder
+    pdf_file_path = os.path.join(output_folder, f"{row['Full_Name']}.pdf")
+    pdf.output(pdf_file_path)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
