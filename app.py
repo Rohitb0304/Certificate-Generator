@@ -1,11 +1,11 @@
-from flask import Flask, request, render_template, send_file, redirect, url_for, flash
+from flask import Flask, request, render_template, send_file, redirect, url_for, flash, session, jsonify
 import pandas as pd
 from pptx import Presentation
 import os
 import zipfile
 import shutil
-
 from utils import generate_certificate
+import time
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -20,6 +20,13 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(CERTIFICATES_FOLDER, exist_ok=True)
 os.makedirs(ZIP_FOLDER, exist_ok=True)
 
+# Global progress tracking
+progress_status = {
+    "total": 0,
+    "completed": 0,
+    "current_name": ""
+}
+
 def check_pptx_tags(pptx_path):
     prs = Presentation(pptx_path)
     tags_found = any('<<FULL NAME>>' in shape.text for slide in prs.slides for shape in slide.shapes if shape.has_text_frame)
@@ -27,6 +34,8 @@ def check_pptx_tags(pptx_path):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    global progress_status
+
     if request.method == 'POST':
         if 'pptx_file' not in request.files or 'csv_file' not in request.files:
             flash('Please upload both PPTX and CSV files!')
@@ -54,9 +63,20 @@ def index():
             flash('The limit is 40 records. Please upload a smaller file.')
             return redirect(request.url)
 
-        # Process each student
+        # Initialize progress status
+        progress_status = {
+            "total": len(student_data),
+            "completed": 0,
+            "current_name": ""
+        }
+
+        # Process each student and update progress
         for idx, row in student_data.iterrows():
+            student_name = row['Full_Name']
+            progress_status['current_name'] = student_name  # Update the current student's name
             generate_certificate(row, pptx_path, CERTIFICATES_FOLDER)
+            progress_status['completed'] += 1  # Update the count of completed certificates
+            time.sleep(1)  # Simulate delay for certificate generation
 
         flash('Certificates generated successfully! Preparing download...')
 
@@ -74,6 +94,11 @@ def index():
         return send_file(zip_filename, as_attachment=True, download_name='certificates.zip')
 
     return render_template('index.html')
+
+@app.route('/progress', methods=['GET'])
+def progress():
+    """Return the current progress of certificate generation."""
+    return jsonify(progress_status)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
