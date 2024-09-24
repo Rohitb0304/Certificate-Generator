@@ -56,7 +56,15 @@ def index():
 
         # Process each student
         for idx, row in student_data.iterrows():
+            print(f"Generating certificate for: {row['Full_Name']}")
             generate_certificate(row, pptx_path, CERTIFICATES_FOLDER)
+
+            # Check if the certificate was created
+            certificate_path = os.path.join(CERTIFICATES_FOLDER, f"{row['Full_Name']}.pptx")
+            if os.path.exists(certificate_path):
+                print(f"Certificate saved at: {certificate_path}")
+            else:
+                print(f"Error: Certificate not saved for {row['Full_Name']}")
 
         flash('Certificates generated successfully! Preparing download...')
 
@@ -65,7 +73,9 @@ def index():
         with zipfile.ZipFile(zip_filename, 'w') as zipf:
             for root, dirs, files in os.walk(CERTIFICATES_FOLDER):
                 for file in files:
-                    zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), CERTIFICATES_FOLDER))
+                    file_path = os.path.join(root, file)
+                    print(f"Adding {file_path} to ZIP")
+                    zipf.write(file_path, os.path.relpath(file_path, CERTIFICATES_FOLDER))
 
         # Clear old certificates
         shutil.rmtree(CERTIFICATES_FOLDER)
