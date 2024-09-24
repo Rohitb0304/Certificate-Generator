@@ -50,45 +50,16 @@
                 <input class="border border-gray-300 p-2 rounded-lg w-full" type="file" name="csv_file" accept=".csv" required>
             </div>
 
-            <div class="mb-4">
-                <label class="block text-lg">Select Certificate Format:</label>
-                <div class="flex items-center">
-                    <input type="radio" name="generation_type" value="pptx" id="pptx" checked>
-                    <label for="pptx" class="ml-2">PPTX</label>
-                </div>
-                <div class="flex items-center">
-                    <input type="radio" name="generation_type" value="pdf" id="pdf">
-                    <label for="pdf" class="ml-2">PDF</label>
-                </div>
-            </div>
-
-            <p id="estimated-time" class="text-white mb-4"></p>
-
             <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Generate Certificates
             </button>
         </form>
 
         <div class="loading flex items-center justify-center mt-4">
-            <div class="loader animate-spin h-10 w-10 border-t-4 border-b-4 border-white rounded-full"></div>
-            <span class="ml-4">Generating certificates...</span>
-        </div>
-
-        <div id="progress-bar-container" class="mt-4 hidden">
-            <p id="current-student" class="text-white"></p>
-            <div class="relative pt-1">
-                <div class="flex mb-2 items-center justify-between">
-                    <div>
-                        <span id="progress-text" class="text-xs font-semibold inline-block text-teal-600 uppercase py-1 px-2 rounded-full"></span>
-                    </div>
-                    <div>
-                        <span id="progress-percentage" class="text-xs font-semibold inline-block text-teal-600 uppercase py-1 px-2 rounded-full"></span>
-                    </div>
-                </div>
-                <div class="flex h-2 bg-gray-200">
-                    <div id="progress-bar" class="bg-teal-600 h-full" style="width: 0%;"></div>
-                </div>
+            <div class="w-full bg-gray-200 rounded-full">
+                <div id="progress-bar" class="bg-blue-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full" style="width: 0%">0%</div>
             </div>
+            <p id="current-student" class="mt-4 text-white text-lg"></p>
         </div>
 
         <div class="copyright mt-8 text-center">
@@ -99,44 +70,26 @@
     <script>
         function showLoading() {
             document.querySelector('.loading').style.display = 'flex';
-            document.getElementById('progress-bar-container').classList.remove('hidden');
-            checkEstimatedTime();
+            // Start polling the progress
             pollProgress();
         }
 
-        function checkEstimatedTime() {
-            const fileInput = document.querySelector('input[type="file"][name="csv_file"]');
-            const csvFile = fileInput.files[0];
-
-            if (csvFile) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const text = e.target.result;
-                    const lines = text.split('\n');
-                    const numberOfRows = lines.length - 1; // Exclude header
-                    const generationType = document.querySelector('input[name="generation_type"]:checked').value;
-                    const estimatedTime = generationType === 'pdf' ? numberOfRows * 2 : 0; // 2 seconds per PDF
-                    document.getElementById('estimated-time').innerText = `Estimated time: ${estimatedTime} seconds`;
-                };
-                reader.readAsText(csvFile);
-            }
-        }
-
         function pollProgress() {
-            setInterval(async () => {
-                const response = await fetch('/progress');
-                const progressData = await response.json();
-                updateProgress(progressData);
-            }, 1000);
-        }
+            const interval = setInterval(() => {
+                fetch('/progress')
+                    .then(response => response.json())
+                    .then(data => {
+                        const progress = (data.completed / data.total) * 100;
+                        document.getElementById('progress-bar').style.width = progress + '%';
+                        document.getElementById('progress-bar').textContent = Math.round(progress) + '%';
+                        document.getElementById('current-student').textContent = 'Generating for: ' + data.current_name;
 
-        function updateProgress(progressData) {
-            const { total, completed, current_name } = progressData;
-            const percentage = (completed / total) * 100;
-            document.getElementById('current-student').innerText = `Generating certificate for: ${current_name}`;
-            document.getElementById('progress-text').innerText = `${completed} of ${total} completed`;
-            document.getElementById('progress-percentage').innerText = `${percentage.toFixed(2)}%`;
-            document.getElementById('progress-bar').style.width = `${percentage}%`;
+                        // Stop polling when completed
+                        if (data.completed === data.total) {
+                            clearInterval(interval);
+                        }
+                    });
+            }, 1000);  // Poll every second
         }
     </script>
 </body>
