@@ -27,14 +27,54 @@ progress_status = {
     "current_name": ""
 }
 
+# Store processed rows to prevent infinite loop or repeat
+processed_rows = set()
+
 def check_pptx_tags(pptx_path):
+    """Check if the PPTX file contains the tag <<FULL NAME>>"""
     prs = Presentation(pptx_path)
     tags_found = any('<<FULL NAME>>' in shape.text for slide in prs.slides for shape in slide.shapes if shape.has_text_frame)
     return tags_found
 
+def apply_name_with_template_style(shape, name):
+    """Replaces <<FULL NAME>> with the actual name, keeping the original style (font, size, color)"""
+    if shape.has_text_frame:
+        for paragraph in shape.text_frame.paragraphs:
+            for run in paragraph.runs:
+                if '<<FULL NAME>>' in run.text:
+                    # Store original font properties
+                    original_font = run.font
+                    font_size = original_font.size
+                    font_color = original_font.color.rgb
+                    bold = original_font.bold
+                    italic = original_font.italic
+
+                    # Replace <<FULL NAME>> with the actual student name
+                    run.text = name
+                    
+                    # Apply the original formatting
+                    run.font.size = font_size
+                    run.font.color.rgb = font_color
+                    run.font.bold = bold
+                    run.font.italic = italic
+
+def generate_certificate_with_fonts(row, pptx_path, output_folder):
+    """Generates a certificate for a student and preserves the font from PPTX."""
+    prs = Presentation(pptx_path)
+    student_name = row['Full_Name']
+
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                apply_name_with_template_style(shape, student_name)
+
+    output_file = os.path.join(output_folder, f"{student_name}.pptx")
+    prs.save(output_file)
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     global progress_status
+    global processed_rows
 
     if request.method == 'POST':
         if 'pptx_file' not in request.files or 'csv_file' not in request.files:
@@ -74,7 +114,14 @@ def index():
         for idx, row in student_data.iterrows():
             student_name = row['Full_Name']
             progress_status['current_name'] = student_name  # Update the current student's name
-            generate_certificate(row, pptx_path, CERTIFICATES_FOLDER)
+            
+            if idx in processed_rows:
+                continue  # Skip already processed rows
+
+            # Generate certificate and track the processed row
+            generate_certificate_with_fonts(row, pptx_path, CERTIFICATES_FOLDER)
+            processed_rows.add(idx)  # Mark this row as processed
+            
             progress_status['completed'] += 1  # Update the count of completed certificates
             time.sleep(1)  # Simulate delay for certificate generation
 
