@@ -6,3 +6,4 @@ Werkzeug>=2.3.7
 unoconv
 flask-cors
 fpdf
+gunicorn>=20.1.0
