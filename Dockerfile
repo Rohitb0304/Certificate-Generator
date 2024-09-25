@@ -44,9 +44,6 @@ RUN apt-get update && apt-get install -y \
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Gunicorn
-RUN pip install gunicorn
-
 # Copy the rest of the application code
 COPY . .
 
